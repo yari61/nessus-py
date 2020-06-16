@@ -79,20 +79,24 @@ class Connector(object):
         return self.connect(method=method, uri=uri, data=data).json()
 
     def scan(self, scan_id: int) -> Scan:
-        kwargs = self.scan_details(scan_id=scan_id)
-        info = kwargs.pop("info")
-        hosts = kwargs.pop("hosts")
-        history = kwargs.pop("history")
-        vulnerabilities = kwargs.pop("vulnerabilities")
-        remediations = kwargs.pop("remediations")
-        notes = kwargs.pop("notes")
-        filters = kwargs.pop("filters")
-        compliance = kwargs.pop("compliance")
-        comphosts = kwargs.pop("comphosts")
-        kwargs["name"] = info.get("name")
-        kwargs["id"] = info.get("object_id")
-        kwargs["uuid"] = info.get("uuid")
-        kwargs["history"] = [entry.get("history_id") for entry in history]
+        """
+        info = details.pop("info")
+        hosts = details.pop("hosts")
+        history = details.pop("history")
+        vulnerabilities = details.pop("vulnerabilities")
+        remediations = details.pop("remediations")
+        notes = details.pop("notes")
+        filters = details.pop("filters")
+        compliance = details.pop("compliance")
+        comphosts = details.pop("comphosts")
+        """
+
+        details = self.scan_details(scan_id=scan_id)
+        kwargs = dict()
+        kwargs["name"] = details.get("info").get("name")
+        kwargs["id"] = details.get("info").get("object_id")
+        kwargs["uuid"] = details.get("info").get("uuid")
+        kwargs["history"] = [entry.get("history_id") for entry in details.get("history")]
         return Scan(connector=self, **kwargs)
 
     def host_details(self, scan_id: int, host_id: int, history_id: int = None):
@@ -102,18 +106,22 @@ class Connector(object):
         return self.connect(method=method, uri=uri, data=data).json()
 
     def host(self, scan_id: int, host_id: int, history_id: int = None) -> Host:
-        kwargs = self.host_details(scan_id=scan_id, host_id=host_id, history_id=history_id)
-        info = kwargs.pop("info")
-        vulnerabilities = kwargs.pop("vulnerabilities")
-        compliance = kwargs.pop("compliance")
+        """
+        info = details.pop("info")
+        vulnerabilities = details.pop("vulnerabilities")
+        compliance = details.pop("compliance")
+        """
+
+        details = self.host_details(scan_id=scan_id, host_id=host_id, history_id=history_id)
+        kwargs = dict()
         kwargs["scan_id"] = scan_id
         kwargs["history_id"] = history_id
         kwargs["id"] = host_id
-        kwargs["fqdn"] = info.get("host-fqdn")
-        kwargs["ip"] = info.get("host-ip")
-        kwargs["mac"] = info.get("mac-address")
-        kwargs["os"] = info.get("operating-system")
-        kwargs["plugin_entries"] = [entry.get("plugin_id") for entry in vulnerabilities]
+        kwargs["fqdn"] = details.get("info").get("host-fqdn")
+        kwargs["ip"] = details.get("info").get("host-ip")
+        kwargs["mac"] = details.get("info").get("mac-address")
+        kwargs["os"] = details.get("info").get("operating-system")
+        kwargs["plugin_entries"] = [entry.get("plugin_id") for entry in details.get("vulnerabilities")]
         return Host(connector=self, **kwargs)
 
     def plugin(self, plugin_id: int) -> Plugin:

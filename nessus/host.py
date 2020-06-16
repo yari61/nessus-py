@@ -1,5 +1,14 @@
+import importlib
+
+try:
+    settings = importlib.import_module("settings")
+    attributes = getattr(settings, "host_attributes")
+except ImportError:
+    from .settings import host_attributes as attributes
+
+
 class Host(object):
-    __slots__ = ("connector", "scan_id", "history_id", "id", "fqdn", "ip", "mac", "os", "plugin_entries")
+    __slots__ = ("connector", *[attr for attr in attributes])
 
     def __init__(self, **kwargs):
         for attr in self.__slots__:
