@@ -20,6 +20,12 @@ class Scan(object):
         for history_id in self.history:
             yield self.historical_entry(history_id=history_id)
 
+    def __repr__(self):
+        return f"<Scan(id={self.id}, name={self.name})>"
+
+    def list_entries(self):
+        return [historical_entry for historical_entry in self.__iter__()]
+
     def historical_entry(self, history_id: int):
         return ScanEntry(connector=self.connector, scan_id=self.id, history_id=history_id)
 
@@ -33,12 +39,15 @@ class ScanEntry(object):
             if not attr.startswith("_"):
                 self.__setattr__(attr, kwargs.get(attr))
 
+    def __repr__(self):
+        return f"<ScanEntry(scan_id={self.scan_id}, history_id={self.history_id})>"
+
     def _historical_entry_details(self) -> dict:
         return self.connector.scan_details(scan_id=self.scan_id, history_id=self.history_id)
 
     @property
     def details(self):
-        if self._details is None:
+        if getattr(self, "_details", None) is None:
             self.details = self._historical_entry_details()
         return self._details
 

@@ -40,10 +40,18 @@ class Connector(object):
         self._ssl_cert = kwargs.get("ssl_cert")
         self._ssl_key = kwargs.get("ssl_key")
 
+    def __repr__(self):
+        return f"<Connector(host={self.url}, port={self.port})>"
+
     def scanners(self) -> dict:
         method = "GET"
         uri = "/scanners"
-        return self.connect(method=method, uri=uri).json()
+        return self._connect(method=method, uri=uri).json()
+
+    def folders(self) -> dict:
+        method = "GET"
+        uri = "/folders"
+        return self._connect(method=method, uri=uri).json()
 
     def scans(self, lmd: int = None, folder_id: int = None, owner=None, name=None) -> list:
         scans_list = self._scans_list(lmd=lmd, folder_id=folder_id)
@@ -54,6 +62,7 @@ class Connector(object):
             cor_lmd = lmd is None or scan.get("last_modification_date") >= lmd
             cor_folder = folder_id is None or scan.get("folder_id") == folder_id
             if cor_owner and cor_name and cor_lmd and cor_folder:
+                scan = self.scan(scan_id=scan.get("id"))
                 scans_to_return.append(scan)
         return scans_to_return
 
@@ -65,32 +74,15 @@ class Connector(object):
             data["last_modification_date"] = lmd
         if folder_id is not None:
             data["folder_id"] = folder_id
-        return self.connect(method=method, uri=uri, data=data).json().get("scans")
-
-    def folders(self) -> dict:
-        method = "GET"
-        uri = "/folders"
-        return self.connect(method=method, uri=uri).json()
+        return self._connect(method=method, uri=uri, data=data).json().get("scans")
 
     def scan_details(self, scan_id: int, history_id: int = None):
         method = "GET"
         uri = f"/scans/{scan_id}"
         data = {"history_id": history_id} if history_id is not None else None
-        return self.connect(method=method, uri=uri, data=data).json()
+        return self._connect(method=method, uri=uri, data=data).json()
 
     def scan(self, scan_id: int) -> Scan:
-        """
-        info = details.pop("info")
-        hosts = details.pop("hosts")
-        history = details.pop("history")
-        vulnerabilities = details.pop("vulnerabilities")
-        remediations = details.pop("remediations")
-        notes = details.pop("notes")
-        filters = details.pop("filters")
-        compliance = details.pop("compliance")
-        comphosts = details.pop("comphosts")
-        """
-
         details = self.scan_details(scan_id=scan_id)
         kwargs = dict()
         kwargs["name"] = details.get("info").get("name")
@@ -103,15 +95,9 @@ class Connector(object):
         method = "GET"
         uri = f"/scans/{scan_id}/hosts/{host_id}"
         data = {"history_id": history_id} if history_id is not None else None
-        return self.connect(method=method, uri=uri, data=data).json()
+        return self._connect(method=method, uri=uri, data=data).json()
 
     def host(self, scan_id: int, host_id: int, history_id: int = None) -> Host:
-        """
-        info = details.pop("info")
-        vulnerabilities = details.pop("vulnerabilities")
-        compliance = details.pop("compliance")
-        """
-
         details = self.host_details(scan_id=scan_id, host_id=host_id, history_id=history_id)
         kwargs = dict()
         kwargs["scan_id"] = scan_id
@@ -127,7 +113,7 @@ class Connector(object):
     def plugin(self, plugin_id: int) -> Plugin:
         method = "GET"
         uri = f"/plugins/plugin/{plugin_id}"
-        kwargs = self.connect(method=method, uri=uri).json()
+        kwargs = self._connect(method=method, uri=uri).json()
         attributes = kwargs.pop("attributes")
         for attr in attributes:
             name = attr.get("attribute_name")
@@ -140,9 +126,9 @@ class Connector(object):
         method = "GET"
         uri = f"/scans/{scan_id}/hosts/{host_id}/plugins/{plugin_id}"
         data = {"history_id": history_id} if history_id is not None else None
-        return self.connect(method=method, uri=uri, data=data).json().get("outputs")
+        return self._connect(method=method, uri=uri, data=data).json().get("outputs")
 
-    def connect(self, method: str, uri: str, headers: dict = None, data: dict = None, verify: bool = None) -> Response:
+    def _connect(self, method: str, uri: str, headers: dict = None, data: dict = None, verify: bool = None) -> Response:
         verify = verify if verify is not None else ssl_verify
         headers = headers if headers is not None else self.default_headers
         url = f"https://{self.url}:{self.port}{uri}"
